@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,20 +13,28 @@ namespace cli_life
     {
         public bool IsAlive;
         public readonly List<Cell> neighbors = new List<Cell>();
-        private bool IsAliveNext;
+        private bool _isAliveNext;
+
         public void DetermineNextLiveState()
         {
             int liveNeighbors = neighbors.Where(x => x.IsAlive).Count();
             if (IsAlive)
-                IsAliveNext = liveNeighbors == 2 || liveNeighbors == 3;
+                _isAliveNext = liveNeighbors == 2 || liveNeighbors == 3;
             else
-                IsAliveNext = liveNeighbors == 3;
+                _isAliveNext = liveNeighbors == 3;
         }
+
         public void Advance()
         {
-            IsAlive = IsAliveNext;
+            IsAlive = _isAliveNext;
+        }
+
+        public int NeighborCount()
+        {
+            return neighbors.Where(x => x.IsAlive).Count();
         }
     }
+
     public class Board
     {
         public readonly Cell[,] Cells;
@@ -85,46 +95,56 @@ namespace cli_life
                 }
             }
         }
-    }
-    class Program
-    {
-        static Board board;
-        static private void Reset()
+        public int CountLiveCells()
         {
-            board = new Board(
-                width: 50,
-                height: 20,
-                cellSize: 1,
-                liveDensity: 0.5);
+            return Cells.Cast<Cell>().Count(cell => cell.IsAlive);
         }
-        static void Render()
+
+        public int CountSymmetricElements()
         {
-            for (int row = 0; row < board.Rows; row++)
+            int symmetricCount = 0;
+
+            for (int x = 0; x < Columns; x++)
             {
-                for (int col = 0; col < board.Columns; col++)   
+                for (int y = 0; y < Rows; y++)
                 {
-                    var cell = board.Cells[col, row];
-                    if (cell.IsAlive)
+                    if (Cells[x, y].IsAlive == Cells[Columns - x - 1, y].IsAlive)
                     {
-                        Console.Write('*');
-                    }
-                    else
-                    {
-                        Console.Write(' ');
+                        symmetricCount++;
                     }
                 }
-                Console.Write('\n');
+            }
+
+            return symmetricCount;
+        }
+
+        public void Print()
+        {
+            for (int y = 0; y < Rows; y++)
+            {
+                for (int x = 0; x < Columns; x++)
+                {
+                    Console.Write(Cells[x, y].IsAlive ? "#" : ".");
+                }
+                Console.WriteLine();
             }
         }
+    }
+
+    class Program
+    {
         static void Main(string[] args)
         {
-            Reset();
-            while(true)
+            var board = new Board(60, 20, 1);
+
+            while (true)
             {
                 Console.Clear();
-                Render();
+                board.Print();
+                Console.WriteLine("Live cells: {0}", board.CountLiveCells());
+                Console.WriteLine("Symmetric elements: {0}", board.CountSymmetricElements());
                 board.Advance();
-                Thread.Sleep(1000);
+                Thread.Sleep(100);
             }
         }
     }
