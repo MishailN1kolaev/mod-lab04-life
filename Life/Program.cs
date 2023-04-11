@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -102,9 +101,8 @@ namespace cli_life
 
         public int CountSymmetricElements()
         {
-            int symmetricCount = 0;
-
-            for (int x = 0; x < Columns; x++)
+            int symmetricCount = 0; 
+                for (int x = 0; x < Columns; x++)
             {
                 for (int y = 0; y < Rows; y++)
                 {
@@ -118,6 +116,47 @@ namespace cli_life
             return symmetricCount;
         }
 
+        public static void SaveState(Board board, String path)
+        {
+            String buf = "";
+            for (int row = 0; row < board.Rows; row++)
+            {
+                for (int col = 0; col < board.Columns; col++)
+                {
+                    var cell = board.Cells[col, row];
+                    if (cell.IsAlive)
+                    {
+                        buf += "*";
+                    }
+                    else
+                    {
+                        buf += " ";
+                    }
+                }
+                buf += "\n";
+            }
+            File.WriteAllText(path, buf);
+        }
+
+        public static void LoadState(Board board, string path)
+        {
+            if (!File.Exists(path))
+            {
+                Console.WriteLine($"File {path} not found. Press any key to continue.");
+                Console.ReadKey();
+                return;
+            }
+
+            string[] lines = File.ReadAllLines(path);
+            for (int y = 0; y < board.Rows && y < lines.Length; y++)
+            {
+                for (int x = 0; x < board.Columns && x < lines[y].Length; x++)
+                {
+                    board.Cells[x, y].IsAlive = lines[y][x] == '*';
+                }
+            }
+        }
+
         public void Print()
         {
             for (int y = 0; y < Rows; y++)
@@ -129,21 +168,138 @@ namespace cli_life
                 Console.WriteLine();
             }
         }
+        public int CountElements()
+        {
+            return Columns * Rows;
+        }
+
+        // Классификация элементов, сопоставление с образцами
+        public void ClassifyElements()
+        {
+            // Вам необходимо определить классификацию и образцы для сопоставления.
+            // Здесь простой пример с использованием предопределенных образцов.
+            var pattern1 = new bool[,] { { true, true }, { true, true } };
+            var pattern2 = new bool[,] { { true, false }, { false, true } };
+
+            for (int x = 0; x < Columns; x++)
+            {
+                for (int y = 0; y < Rows; y++)
+                {
+                    // Здесь вы можете проверить, соответствует ли текущий элемент какому-либо образцу
+                    // и затем обработать результаты сопоставления.
+                }
+            }
+        }
+
+        // Исследование среднего времени (число поколений) перехода в стабильную фазу
+        public double AverageTransitionToStablePhase(int iterations)
+        {
+            int totalGenerations = 0;
+
+            for (int i = 0; i < iterations; i++)
+            {
+                int generations = 0;
+                var tempBoard = new Board(Columns * CellSize, Rows * CellSize, CellSize);
+                bool isStable = false;
+
+                while (!isStable)
+                {
+                    tempBoard.Advance();
+                    generations++;
+
+                    // Здесь вам нужно определить условия стабильности и проверить,
+                    // соответствует ли текущая доска этим условиям
+                    // Если да, установите isStable = true
+                }
+
+                totalGenerations += generations;
+            }
+
+            return (double)totalGenerations / iterations;
+        }
+
+        // Исследование симметричности всей системы от числа поколений
+        public double SymmetryInvestigation(int generations)
+        {
+            int totalSymmetricElements = 0;
+
+            for (int i = 0; i < generations; i++)
+            {
+                Advance();
+                totalSymmetricElements += CountSymmetricElements();
+            }
+
+            return (double)totalSymmetricElements / generations;
+        }
     }
+
 
     class Program
     {
         static void Main(string[] args)
         {
             var board = new Board(60, 20, 1);
+            bool exit = false;
+            string savePath = @"C:\Users\Михаил\source\repos\mod-lab04-life\Life\saved_state.txt";
+            string[] patterns = {
+            @"C:\Users\Михаил\source\repos\mod-lab04-life\Life\blinker_state.txt",
+            @"C:\Users\Михаил\source\repos\mod-lab04-life\Life\block_state.txt",
+           @"C:\Users\Михаил\source\repos\mod-lab04-life\Life\glider_state.txt",
+        };
+           
+            int currentPattern = 0;
+            Board.LoadState(board, patterns[currentPattern]);
 
-            while (true)
+
+            while (!exit)
             {
                 Console.Clear();
                 board.Print();
                 Console.WriteLine("Live cells: {0}", board.CountLiveCells());
                 Console.WriteLine("Symmetric elements: {0}", board.CountSymmetricElements());
-                board.Advance();
+
+                Console.WriteLine("Press 'N' to load next pattern, 'S' to save, 'L' to load, 'Q' to quit or any other key to advance");
+
+                if (Console.KeyAvailable)
+                {
+                    var key = Console.ReadKey(true).Key;
+
+                    switch (key)
+                    {
+                        case ConsoleKey.N:
+                            currentPattern = (currentPattern + 1) % patterns.Length;
+                            Board.LoadState(board, patterns[currentPattern]);
+                            break;
+                        case ConsoleKey.A:
+                            int iterations = 100; // Задайте количество итераций для AverageTransitionToStablePhase
+                            Console.WriteLine("Average transition to stable phase: {0}", board.AverageTransitionToStablePhase(iterations));
+                            Console.WriteLine("Press any key to continue...");
+                            Console.ReadKey(true);
+                            break;
+                        case ConsoleKey.Y:
+                            int generations = 50; // Задайте количество поколений для SymmetryInvestigation
+                            Console.WriteLine("Symmetry investigation: {0}", board.SymmetryInvestigation(generations));
+                            Console.WriteLine("Press any key to continue...");
+                            Console.ReadKey(true);
+                            break;
+                        case ConsoleKey.S:
+                            Board.SaveState(board, savePath);
+                            break;
+                        case ConsoleKey.L:
+                            Board.LoadState(board, savePath);
+                            break;
+                        case ConsoleKey.Q:
+                            exit = true;
+                            break;
+                        default:
+                            board.Advance();
+                            break;
+                    }
+                }
+                else
+                {
+                    board.Advance();
+                }
                 Thread.Sleep(100);
             }
         }
